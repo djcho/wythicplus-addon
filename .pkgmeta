@@ -1,0 +1,7 @@
+package-as: WythicPlus
+
+ignore:
+  - .github
+  - .gitignore
+  - README.md
+  - .pkgmeta

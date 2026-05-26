@@ -1,0 +1,12 @@
+## Interface: 110105
+## Title: Wythic+
+## Notes: 로그인 시 전투 로그 활성화 도우미 (WCL 로깅용)
+## Notes-enUS: Combat log activation helper for WCL logging
+## Author: Wythic
+## Version: @project-version@
+## SavedVariables: WythicPlusDB
+## IconTexture: Interface\AddOns\WythicPlus\Textures\logo
+## X-Website: https://wythic.com
+## X-Category: Combat
+
+WythicPlus.lua
