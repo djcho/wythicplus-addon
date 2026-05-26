@@ -9,5 +9,6 @@
 ## X-Website: https://wythic.com
 ## X-Category: Combat
 ## X-Curse-Project-ID: 1554738
+## X-Wago-ID: v633nl6b
 
 WythicPlus.lua
