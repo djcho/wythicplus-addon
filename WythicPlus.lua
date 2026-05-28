@@ -82,10 +82,14 @@ local function CreateMinimapIndicator()
     SetMinimapButtonPosition(WythicPlusDB.minimapAngle)
 
     -- Shift+left drag to reposition
-    btn:RegisterForDrag("LeftButton")
+    btn:SetScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" and IsShiftKeyDown() then
+            btn:RegisterForDrag("LeftButton")
+        else
+            btn:RegisterForDrag()
+        end
+    end)
     btn:SetScript("OnDragStart", function()
-        if not IsShiftKeyDown() then return end
-        btn.dragging = true
         btn:SetScript("OnUpdate", function()
             local mx, my = Minimap:GetCenter()
             local cx, cy = GetCursorPosition()
@@ -97,7 +101,7 @@ local function CreateMinimapIndicator()
         end)
     end)
     btn:SetScript("OnDragStop", function()
-        btn.dragging = false
+        btn:RegisterForDrag()
         btn:SetScript("OnUpdate", nil)
     end)
 
