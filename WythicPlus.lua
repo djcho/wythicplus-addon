@@ -16,9 +16,9 @@ local DEFAULT_ANGLE = 220 -- degrees
 local function UpdateIndicator()
     if not minimapBtn then return end
     if LoggingCombat() then
-        minimapBtn.border:SetVertexColor(0, 0.85, 0, 1)
+        minimapBtn.statusBg:SetVertexColor(0, 0.85, 0, 0.5)
     else
-        minimapBtn.border:SetVertexColor(0.85, 0, 0, 1)
+        minimapBtn.statusBg:SetVertexColor(0.85, 0, 0, 0.5)
     end
 end
 
@@ -59,6 +59,17 @@ local function CreateMinimapIndicator()
     btn:SetFrameLevel(8)
     btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
+    -- Status background glow (green/red circle behind icon)
+    local statusBg = btn:CreateTexture(nil, "BACKGROUND")
+    statusBg:SetSize(24, 24)
+    statusBg:SetPoint("CENTER")
+    statusBg:SetColorTexture(1, 1, 1, 1)
+    local bgMask = btn:CreateMaskTexture()
+    bgMask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+    bgMask:SetAllPoints(statusBg)
+    statusBg:AddMaskTexture(bgMask)
+    btn.statusBg = statusBg
+
     -- Wy+ logo icon
     local icon = btn:CreateTexture(nil, "ARTWORK")
     icon:SetSize(20, 20)
@@ -66,12 +77,11 @@ local function CreateMinimapIndicator()
     icon:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\icon")
     btn.icon = icon
 
-    -- Border (tinted green/red by status)
+    -- Gold border (unchanged)
     local border = btn:CreateTexture(nil, "OVERLAY")
     border:SetSize(54, 54)
     border:SetPoint("CENTER", 0, 0)
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-    btn.border = border
 
     -- Highlight on hover
     btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
