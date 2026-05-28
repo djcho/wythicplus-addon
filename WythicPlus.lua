@@ -16,9 +16,9 @@ local DEFAULT_ANGLE = 220 -- degrees
 local function UpdateIndicator()
     if not minimapBtn then return end
     if LoggingCombat() then
-        minimapBtn.statusBg:SetVertexColor(0, 0.85, 0, 0.5)
+        minimapBtn.border:SetVertexColor(0, 0.85, 0, 1)
     else
-        minimapBtn.statusBg:SetVertexColor(0.85, 0, 0, 0.5)
+        minimapBtn.border:SetVertexColor(0.85, 0, 0, 1)
     end
 end
 
@@ -59,17 +59,6 @@ local function CreateMinimapIndicator()
     btn:SetFrameLevel(8)
     btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
-    -- Status background glow (green/red circle behind icon)
-    local statusBg = btn:CreateTexture(nil, "BACKGROUND")
-    statusBg:SetSize(24, 24)
-    statusBg:SetPoint("CENTER")
-    statusBg:SetColorTexture(1, 1, 1, 1)
-    local bgMask = btn:CreateMaskTexture()
-    bgMask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
-    bgMask:SetAllPoints(statusBg)
-    statusBg:AddMaskTexture(bgMask)
-    btn.statusBg = statusBg
-
     -- Wy+ logo icon
     local icon = btn:CreateTexture(nil, "ARTWORK")
     icon:SetSize(20, 20)
@@ -77,11 +66,12 @@ local function CreateMinimapIndicator()
     icon:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\icon")
     btn.icon = icon
 
-    -- Gold border (anchored TOPLEFT — texture is designed for this)
+    -- Border (tinted green/red by combat log status)
     local border = btn:CreateTexture(nil, "OVERLAY")
     border:SetSize(54, 54)
     border:SetPoint("TOPLEFT", btn, "TOPLEFT", 0, 0)
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    btn.border = border
 
     -- Highlight on hover
     btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
@@ -91,11 +81,12 @@ local function CreateMinimapIndicator()
     WythicPlusDB.minimapAngle = WythicPlusDB.minimapAngle or DEFAULT_ANGLE
     SetMinimapButtonPosition(WythicPlusDB.minimapAngle)
 
-    -- Drag to reposition around minimap edge
+    -- Shift+left drag to reposition
     btn:RegisterForDrag("LeftButton")
-    btn:SetScript("OnDragStart", function(self)
-        self.dragging = true
-        self:SetScript("OnUpdate", function()
+    btn:SetScript("OnDragStart", function()
+        if not IsShiftKeyDown() then return end
+        btn.dragging = true
+        btn:SetScript("OnUpdate", function()
             local mx, my = Minimap:GetCenter()
             local cx, cy = GetCursorPosition()
             local scale = Minimap:GetEffectiveScale()
@@ -105,27 +96,9 @@ local function CreateMinimapIndicator()
             SetMinimapButtonPosition(angle)
         end)
     end)
-    btn:SetScript("OnDragStop", function(self)
-        self.dragging = false
-        -- Restore periodic check
-        local elapsed = 0
-        self:SetScript("OnUpdate", function(_, dt)
-            elapsed = elapsed + dt
-            if elapsed >= 2 then
-                elapsed = 0
-                UpdateIndicator()
-            end
-        end)
-    end)
-
-    -- Periodic state check (every 2s)
-    local elapsed = 0
-    btn:SetScript("OnUpdate", function(_, dt)
-        elapsed = elapsed + dt
-        if elapsed >= 2 then
-            elapsed = 0
-            UpdateIndicator()
-        end
+    btn:SetScript("OnDragStop", function()
+        btn.dragging = false
+        btn:SetScript("OnUpdate", nil)
     end)
 
     -- Tooltip
@@ -137,14 +110,15 @@ local function CreateMinimapIndicator()
         else
             GameTooltip:AddLine("전투 로그: |cffff0000비활성|r")
         end
-        GameTooltip:AddLine("|cff888888좌클릭: 소개 · 우클릭: 전환 · 드래그: 이동|r", 0.5, 0.5, 0.5)
+        GameTooltip:AddLine("|cff888888좌클릭: 소개 · 우클릭: 메뉴|r", 0.5, 0.5, 0.5)
+        GameTooltip:AddLine("|cff888888Shift+드래그: 이동|r", 0.5, 0.5, 0.5)
         GameTooltip:Show()
     end)
     btn:SetScript("OnLeave", function()
         GameTooltip:Hide()
     end)
 
-    -- Left click: show onboarding / Right click: toggle combat log
+    -- Left click: show onboarding / Right click: context menu
     btn:SetScript("OnClick", function(_, button)
         if button == "LeftButton" then
             local f = _G["WythicPlusOnboarding"] or CreateOnboardingFrame()
@@ -152,14 +126,32 @@ local function CreateMinimapIndicator()
             f.pages[2]:Hide()
             f:Show()
         else
-            if LoggingCombat() then
-                LoggingCombat(false)
-                print(PREFIX .. "전투 로그가 비활성화되었습니다.")
-            else
-                LoggingCombat(true)
-                print(PREFIX .. "전투 로그가 활성화되었습니다.")
-            end
-            UpdateIndicator()
+            MenuUtil.CreateContextMenu(btn, function(_, root)
+                root:CreateTitle("Wythic+")
+
+                local logging = LoggingCombat()
+                root:CreateButton(logging and "전투 로그 끄기" or "전투 로그 켜기", function()
+                    if logging then
+                        LoggingCombat(false)
+                        print(PREFIX .. "전투 로그가 비활성화되었습니다.")
+                    else
+                        LoggingCombat(true)
+                        print(PREFIX .. "전투 로그가 활성화되었습니다.")
+                    end
+                    UpdateIndicator()
+                end)
+
+                root:CreateCheckbox("자동 활성화 (로그인 시 팝업 없이)", function()
+                    return WythicPlusDB.autoEnable
+                end, function()
+                    WythicPlusDB.autoEnable = not WythicPlusDB.autoEnable
+                    if WythicPlusDB.autoEnable then
+                        print(PREFIX .. "자동 활성화 모드 |cff00ff00켜짐|r")
+                    else
+                        print(PREFIX .. "자동 활성화 모드 |cffff0000꺼짐|r")
+                    end
+                end)
+            end)
         end
     end)
 
