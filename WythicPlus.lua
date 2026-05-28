@@ -8,47 +8,84 @@ local PREFIX = "|cff00ccff[Wythic+]|r "
 WythicPlusDB = WythicPlusDB or {}
 
 ----------------------------------------------------------------
--- Minimap Indicator (green/red dot)
+-- Minimap Button (standard icon on minimap edge)
 ----------------------------------------------------------------
-local minimapIndicator
+local minimapBtn
+local MINIMAP_RADIUS = 80
+local DEFAULT_ANGLE = 220 -- degrees
 
 local function UpdateIndicator()
-    if not minimapIndicator then return end
+    if not minimapBtn then return end
     if LoggingCombat() then
-        minimapIndicator.dot:SetVertexColor(0, 0.85, 0, 1)
+        minimapBtn.border:SetVertexColor(0, 0.85, 0, 1)
     else
-        minimapIndicator.dot:SetVertexColor(0.85, 0, 0, 1)
+        minimapBtn.border:SetVertexColor(0.85, 0, 0, 1)
     end
+end
+
+local function SetMinimapButtonPosition(angle)
+    local rad = math.rad(angle)
+    local x = math.cos(rad) * MINIMAP_RADIUS
+    local y = math.sin(rad) * MINIMAP_RADIUS
+    minimapBtn:ClearAllPoints()
+    minimapBtn:SetPoint("CENTER", Minimap, "CENTER", x, y)
 end
 
 local function CreateMinimapIndicator()
     local btn = CreateFrame("Button", "WythicPlusMinimapBtn", Minimap)
-    btn:SetSize(20, 20)
-    btn:SetPoint("BOTTOMLEFT", Minimap, "BOTTOMLEFT", 4, 4)
+    btn:SetSize(32, 32)
     btn:SetFrameStrata("MEDIUM")
-    btn:SetFrameLevel(9)
-    btn:RegisterForClicks("AnyUp")
+    btn:SetFrameLevel(8)
+    btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
-    -- Dark border (circle)
-    local border = btn:CreateTexture(nil, "BACKGROUND")
-    border:SetSize(18, 18)
-    border:SetPoint("CENTER")
-    border:SetColorTexture(0, 0, 0, 0.7)
-    local borderMask = btn:CreateMaskTexture()
-    borderMask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
-    borderMask:SetAllPoints(border)
-    border:AddMaskTexture(borderMask)
+    -- Wy+ logo icon
+    local icon = btn:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(20, 20)
+    icon:SetPoint("CENTER")
+    icon:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\icon")
+    btn.icon = icon
 
-    -- Colored dot (circle)
-    local dot = btn:CreateTexture(nil, "ARTWORK")
-    dot:SetSize(12, 12)
-    dot:SetPoint("CENTER")
-    dot:SetColorTexture(1, 1, 1, 1)
-    local dotMask = btn:CreateMaskTexture()
-    dotMask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
-    dotMask:SetAllPoints(dot)
-    dot:AddMaskTexture(dotMask)
-    btn.dot = dot
+    -- Border (tinted green/red by status)
+    local border = btn:CreateTexture(nil, "OVERLAY")
+    border:SetSize(54, 54)
+    border:SetPoint("CENTER", 0, 0)
+    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    btn.border = border
+
+    -- Highlight on hover
+    btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+
+    -- Position from saved angle
+    minimapBtn = btn
+    WythicPlusDB.minimapAngle = WythicPlusDB.minimapAngle or DEFAULT_ANGLE
+    SetMinimapButtonPosition(WythicPlusDB.minimapAngle)
+
+    -- Drag to reposition around minimap edge
+    btn:RegisterForDrag("LeftButton")
+    btn:SetScript("OnDragStart", function(self)
+        self.dragging = true
+        self:SetScript("OnUpdate", function()
+            local mx, my = Minimap:GetCenter()
+            local cx, cy = GetCursorPosition()
+            local scale = Minimap:GetEffectiveScale()
+            cx, cy = cx / scale, cy / scale
+            local angle = math.deg(math.atan2(cy - my, cx - mx))
+            WythicPlusDB.minimapAngle = angle
+            SetMinimapButtonPosition(angle)
+        end)
+    end)
+    btn:SetScript("OnDragStop", function(self)
+        self.dragging = false
+        -- Restore periodic check
+        local elapsed = 0
+        self:SetScript("OnUpdate", function(_, dt)
+            elapsed = elapsed + dt
+            if elapsed >= 2 then
+                elapsed = 0
+                UpdateIndicator()
+            end
+        end)
+    end)
 
     -- Periodic state check (every 2s)
     local elapsed = 0
@@ -69,26 +106,32 @@ local function CreateMinimapIndicator()
         else
             GameTooltip:AddLine("전투 로그: |cffff0000비활성|r")
         end
-        GameTooltip:AddLine("|cff888888클릭하여 전환|r", 0.5, 0.5, 0.5)
+        GameTooltip:AddLine("|cff888888좌클릭: 소개 · 우클릭: 전환 · 드래그: 이동|r", 0.5, 0.5, 0.5)
         GameTooltip:Show()
     end)
     btn:SetScript("OnLeave", function()
         GameTooltip:Hide()
     end)
 
-    -- Click to toggle
-    btn:SetScript("OnClick", function()
-        if LoggingCombat() then
-            LoggingCombat(false)
-            print(PREFIX .. "전투 로그가 비활성화되었습니다.")
+    -- Left click: show onboarding / Right click: toggle combat log
+    btn:SetScript("OnClick", function(_, button)
+        if button == "LeftButton" then
+            local f = _G["WythicPlusOnboarding"] or CreateOnboardingFrame()
+            f.pages[1]:Show()
+            f.pages[2]:Hide()
+            f:Show()
         else
-            LoggingCombat(true)
-            print(PREFIX .. "전투 로그가 활성화되었습니다.")
+            if LoggingCombat() then
+                LoggingCombat(false)
+                print(PREFIX .. "전투 로그가 비활성화되었습니다.")
+            else
+                LoggingCombat(true)
+                print(PREFIX .. "전투 로그가 활성화되었습니다.")
+            end
+            UpdateIndicator()
         end
-        UpdateIndicator()
     end)
 
-    minimapIndicator = btn
     UpdateIndicator()
 end
 
@@ -208,7 +251,7 @@ local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:SetScript("OnEvent", function(_, _, isInitialLogin)
     -- Always create minimap indicator
-    if not minimapIndicator then
+    if not minimapBtn then
         CreateMinimapIndicator()
     end
 

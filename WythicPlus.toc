@@ -5,7 +5,7 @@
 ## Author: Wythic
 ## Version: @project-version@
 ## SavedVariables: WythicPlusDB
-## IconTexture: Interface\AddOns\WythicPlus\Textures\logo
+## IconTexture: Interface\AddOns\WythicPlus\Textures\icon
 ## X-Website: https://wythic.com
 ## X-Category: Combat
 ## X-Curse-Project-ID: 1554738
