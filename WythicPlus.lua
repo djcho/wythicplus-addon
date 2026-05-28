@@ -12,14 +12,21 @@ WythicPlusDB = WythicPlusDB or {}
 ----------------------------------------------------------------
 local minimapBtn
 local DEFAULT_ANGLE = 220
+local isLogging = false
 
 local function UpdateIndicator()
     if not minimapBtn then return end
-    if LoggingCombat() then
+    if isLogging then
         minimapBtn.border:SetVertexColor(0, 0.85, 0, 1)
     else
         minimapBtn.border:SetVertexColor(0.85, 0, 0, 1)
     end
+end
+
+local function SetLogging(enable)
+    LoggingCombat(enable)
+    isLogging = enable
+    UpdateIndicator()
 end
 
 ----------------------------------------------------------------
@@ -115,11 +122,10 @@ local function CreateOnboardingFrame()
     end)
 
     enableBtn:SetScript("OnClick", function()
-        LoggingCombat(true)
+        SetLogging(true)
         print(PREFIX .. "전투 로그가 활성화되었습니다.")
         WythicPlusDB.introSeen = true
         f:Hide()
-        UpdateIndicator()
     end)
 
     laterBtn:SetScript("OnClick", function()
@@ -219,7 +225,7 @@ local function CreateMinimapIndicator()
     btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:AddLine("Wythic+", 0, 0.8, 1)
-        if LoggingCombat() then
+        if isLogging then
             GameTooltip:AddLine("전투 로그: |cff00ff00활성|r")
         else
             GameTooltip:AddLine("전투 로그: |cffff0000비활성|r")
@@ -243,16 +249,9 @@ local function CreateMinimapIndicator()
             MenuUtil.CreateContextMenu(btn, function(_, root)
                 root:CreateTitle("Wythic+")
 
-                local logging = LoggingCombat()
-                root:CreateButton(logging and "전투 로그 끄기" or "전투 로그 켜기", function()
-                    if logging then
-                        LoggingCombat(false)
-                        print(PREFIX .. "전투 로그가 비활성화되었습니다.")
-                    else
-                        LoggingCombat(true)
-                        print(PREFIX .. "전투 로그가 활성화되었습니다.")
-                    end
-                    UpdateIndicator()
+                root:CreateButton(isLogging and "전투 로그 끄기" or "전투 로그 켜기", function()
+                    SetLogging(not isLogging)
+                    print(PREFIX .. (isLogging and "전투 로그가 활성화되었습니다." or "전투 로그가 비활성화되었습니다."))
                 end)
 
                 root:CreateCheckbox("자동 활성화 (로그인 시 팝업 없이)", function()
@@ -278,6 +277,9 @@ end
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:SetScript("OnEvent", function(_, _, isInitialLogin)
+    -- Sync state once on load
+    isLogging = LoggingCombat() and true or false
+
     -- Always create minimap indicator
     if not minimapBtn then
         CreateMinimapIndicator()
@@ -292,16 +294,15 @@ frame:SetScript("OnEvent", function(_, _, isInitialLogin)
     if not isInitialLogin then return end
 
     -- Already logging
-    if LoggingCombat() then
+    if isLogging then
         print(PREFIX .. "전투 로그가 이미 활성화되어 있습니다.")
         return
     end
 
     -- Auto mode
     if WythicPlusDB.autoEnable then
-        LoggingCombat(true)
+        SetLogging(true)
         print(PREFIX .. "전투 로그가 자동으로 활성화되었습니다.")
-        UpdateIndicator()
         return
     end
 
@@ -317,9 +318,8 @@ StaticPopupDialogs["WYTHICPLUS_COMBAT_LOG"] = {
     button1 = "켜기",
     button2 = "취소",
     OnAccept = function()
-        LoggingCombat(true)
+        SetLogging(true)
         print(PREFIX .. "전투 로그가 활성화되었습니다.")
-        UpdateIndicator()
     end,
     timeout = 0,
     whileDead = true,
@@ -337,14 +337,12 @@ SlashCmdList["WYTHICPLUS"] = function(msg)
     msg = (msg or ""):lower():trim()
 
     if msg == "on" then
-        LoggingCombat(true)
+        SetLogging(true)
         print(PREFIX .. "전투 로그가 활성화되었습니다.")
-        UpdateIndicator()
 
     elseif msg == "off" then
-        LoggingCombat(false)
+        SetLogging(false)
         print(PREFIX .. "전투 로그가 비활성화되었습니다.")
-        UpdateIndicator()
 
     elseif msg == "auto" then
         WythicPlusDB.autoEnable = not WythicPlusDB.autoEnable
@@ -355,9 +353,8 @@ SlashCmdList["WYTHICPLUS"] = function(msg)
         end
 
     elseif msg == "status" then
-        local logging = LoggingCombat()
         local auto = WythicPlusDB.autoEnable
-        print(PREFIX .. "전투 로그: " .. (logging and "|cff00ff00활성|r" or "|cffff0000비활성|r"))
+        print(PREFIX .. "전투 로그: " .. (isLogging and "|cff00ff00활성|r" or "|cffff0000비활성|r"))
         print(PREFIX .. "자동 활성화: " .. (auto and "|cff00ff00켜짐|r" or "|cffff0000꺼짐|r"))
 
     elseif msg == "reset" then
