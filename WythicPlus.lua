@@ -96,6 +96,12 @@ local function CreateOnboardingFrame()
     p2:SetAllPoints()
     p2:Hide()
 
+    -- Background: blurred build screenshot
+    local p2bg = p2:CreateTexture(nil, "BACKGROUND")
+    p2bg:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\page2-bg")
+    p2bg:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -12)
+    p2bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 10)
+
     local title2 = p2:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
     title2:SetPoint("TOP", 0, -30)
     title2:SetFont(title2:GetFont(), 28, "OUTLINE")
