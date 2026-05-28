@@ -55,27 +55,33 @@ local function CreateOnboardingFrame()
     local p1 = CreateFrame("Frame", nil, f)
     p1:SetAllPoints()
 
-    local title1 = p1:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    title1:SetPoint("TOP", 0, -30)
-    title1:SetFont(title1:GetFont(), 28, "OUTLINE")
-    title1:SetText("|cff00ccffWythic+|r")
+    -- Top background: banner
+    local bannerTex = p1:CreateTexture(nil, "BACKGROUND")
+    bannerTex:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\banner")
+    bannerTex:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -12)
+    bannerTex:SetPoint("TOPRIGHT", f, "TOPRIGHT", -12, -12)
+    bannerTex:SetHeight(130)
 
-    local sub = p1:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    sub:SetPoint("TOP", title1, "BOTTOM", 0, -10)
-    sub:SetText("WoW M+ 쐐기돌 메타 분석 도구")
+    -- Bottom background: blurred tier list
+    local tierTex = p1:CreateTexture(nil, "BACKGROUND")
+    tierTex:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\tierlist-bg")
+    tierTex:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 12, 10)
+    tierTex:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 10)
+    tierTex:SetHeight(130)
 
     local desc = p1:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    desc:SetPoint("TOP", sub, "BOTTOM", 0, -20)
+    desc:SetPoint("CENTER", f, "CENTER", 0, -10)
     desc:SetWidth(340)
     desc:SetJustifyH("CENTER")
     desc:SetText(
-        "상위 런 데이터를 기반으로\n" ..
+        "|cffeeeeeeWoW M+ 쐐기돌 메타 분석 도구|r\n\n" ..
+        "|cffbbbbbb상위 런 데이터를 기반으로\n" ..
         "스펙 티어 · 조합 추천 · 빌드 가이드를\n" ..
-        "제공합니다."
+        "제공합니다.|r"
     )
 
     local url = p1:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    url:SetPoint("TOP", desc, "BOTTOM", 0, -20)
+    url:SetPoint("TOP", desc, "BOTTOM", 0, -12)
     url:SetText("|cff00ccffwythic.com|r")
 
     local nextBtn = CreateFrame("Button", nil, p1, "UIPanelButtonTemplate")
