@@ -11,7 +11,6 @@ WythicPlusDB = WythicPlusDB or {}
 -- Minimap Button (standard icon on minimap edge)
 ----------------------------------------------------------------
 local minimapBtn
-local MINIMAP_RADIUS = 80
 local DEFAULT_ANGLE = 220 -- degrees
 
 local function UpdateIndicator()
@@ -23,10 +22,32 @@ local function UpdateIndicator()
     end
 end
 
+local function IsMinimapSquare()
+    return ElvUI ~= nil or Minimap.backdrop ~= nil
+end
+
 local function SetMinimapButtonPosition(angle)
     local rad = math.rad(angle)
-    local x = math.cos(rad) * MINIMAP_RADIUS
-    local y = math.sin(rad) * MINIMAP_RADIUS
+    local cos, sin = math.cos(rad), math.sin(rad)
+    local half = Minimap:GetWidth() / 2 + 8
+    local x, y
+
+    if IsMinimapSquare() then
+        -- Square minimap: project to square edge
+        local ac, as = math.abs(cos), math.abs(sin)
+        if ac > as then
+            x = half * (cos > 0 and 1 or -1)
+            y = half * sin / ac
+        else
+            y = half * (sin > 0 and 1 or -1)
+            x = half * cos / as
+        end
+    else
+        -- Round minimap
+        x = cos * half
+        y = sin * half
+    end
+
     minimapBtn:ClearAllPoints()
     minimapBtn:SetPoint("CENTER", Minimap, "CENTER", x, y)
 end
@@ -255,13 +276,13 @@ frame:SetScript("OnEvent", function(_, _, isInitialLogin)
         CreateMinimapIndicator()
     end
 
-    if not isInitialLogin then return end
-
-    -- First time: show onboarding
+    -- First time: show onboarding (regardless of login type)
     if not WythicPlusDB.introSeen then
         CreateOnboardingFrame():Show()
         return
     end
+
+    if not isInitialLogin then return end
 
     -- Already logging
     if LoggingCombat() then
