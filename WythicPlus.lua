@@ -77,10 +77,10 @@ local function CreateMinimapIndicator()
     icon:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\icon")
     btn.icon = icon
 
-    -- Gold border (unchanged)
+    -- Gold border (anchored TOPLEFT — texture is designed for this)
     local border = btn:CreateTexture(nil, "OVERLAY")
     border:SetSize(54, 54)
-    border:SetPoint("CENTER", 0, 0)
+    border:SetPoint("TOPLEFT", btn, "TOPLEFT", 0, 0)
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
 
     -- Highlight on hover
