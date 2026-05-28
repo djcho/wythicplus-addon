@@ -8,10 +8,10 @@ local PREFIX = "|cff00ccff[Wythic+]|r "
 WythicPlusDB = WythicPlusDB or {}
 
 ----------------------------------------------------------------
--- Minimap Button (standard icon on minimap edge)
+-- Forward declarations
 ----------------------------------------------------------------
 local minimapBtn
-local DEFAULT_ANGLE = 220 -- degrees
+local DEFAULT_ANGLE = 220
 
 local function UpdateIndicator()
     if not minimapBtn then return end
@@ -22,6 +22,118 @@ local function UpdateIndicator()
     end
 end
 
+----------------------------------------------------------------
+-- Onboarding Frame (2-step intro) — must be defined before minimap
+----------------------------------------------------------------
+local function CreateOnboardingFrame()
+    local f = CreateFrame("Frame", "WythicPlusOnboarding", UIParent, "BackdropTemplate")
+    f:SetSize(420, 280)
+    f:SetPoint("CENTER")
+    f:SetFrameStrata("DIALOG")
+    f:EnableMouse(true)
+    f:SetMovable(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    f:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
+        tile = true, tileSize = 32, edgeSize = 32,
+        insets = { left = 11, right = 11, top = 12, bottom = 10 },
+    })
+
+    f.pages = {}
+
+    -- Page 1: Branding
+    local p1 = CreateFrame("Frame", nil, f)
+    p1:SetAllPoints()
+
+    local title1 = p1:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title1:SetPoint("TOP", 0, -30)
+    title1:SetFont(title1:GetFont(), 28, "OUTLINE")
+    title1:SetText("|cff00ccffWythic+|r")
+
+    local sub = p1:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    sub:SetPoint("TOP", title1, "BOTTOM", 0, -10)
+    sub:SetText("WoW M+ 쐐기돌 메타 분석 도구")
+
+    local desc = p1:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    desc:SetPoint("TOP", sub, "BOTTOM", 0, -20)
+    desc:SetWidth(340)
+    desc:SetJustifyH("CENTER")
+    desc:SetText(
+        "상위 런 데이터를 기반으로\n" ..
+        "스펙 티어 · 조합 추천 · 빌드 가이드를\n" ..
+        "제공합니다."
+    )
+
+    local url = p1:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    url:SetPoint("TOP", desc, "BOTTOM", 0, -20)
+    url:SetText("|cff00ccffwythic.com|r")
+
+    local nextBtn = CreateFrame("Button", nil, p1, "UIPanelButtonTemplate")
+    nextBtn:SetSize(120, 28)
+    nextBtn:SetPoint("BOTTOM", f, "BOTTOM", 0, 20)
+    nextBtn:SetText("다음 >")
+
+    f.pages[1] = p1
+
+    -- Page 2: Combat Log
+    local p2 = CreateFrame("Frame", nil, f)
+    p2:SetAllPoints()
+    p2:Hide()
+
+    local title2 = p2:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title2:SetPoint("TOP", 0, -30)
+    title2:SetFont(title2:GetFont(), 28, "OUTLINE")
+    title2:SetText("|cff00ccffWythic+|r")
+
+    local q = p2:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    q:SetPoint("TOP", title2, "BOTTOM", 0, -24)
+    q:SetText("전투 로그를 활성화하시겠습니까?")
+
+    local note = p2:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    note:SetPoint("TOP", q, "BOTTOM", 0, -10)
+    note:SetText("|cff888888WCL 로깅에 필요합니다.|r")
+
+    local enableBtn = CreateFrame("Button", nil, p2, "UIPanelButtonTemplate")
+    enableBtn:SetSize(100, 28)
+    enableBtn:SetPoint("BOTTOMRIGHT", f, "BOTTOM", -10, 20)
+    enableBtn:SetText("켜기")
+
+    local laterBtn = CreateFrame("Button", nil, p2, "UIPanelButtonTemplate")
+    laterBtn:SetSize(100, 28)
+    laterBtn:SetPoint("BOTTOMLEFT", f, "BOTTOM", 10, 20)
+    laterBtn:SetText("다음에")
+
+    f.pages[2] = p2
+
+    -- Button logic
+    nextBtn:SetScript("OnClick", function()
+        p1:Hide()
+        p2:Show()
+    end)
+
+    enableBtn:SetScript("OnClick", function()
+        LoggingCombat(true)
+        print(PREFIX .. "전투 로그가 활성화되었습니다.")
+        WythicPlusDB.introSeen = true
+        f:Hide()
+        UpdateIndicator()
+    end)
+
+    laterBtn:SetScript("OnClick", function()
+        WythicPlusDB.introSeen = true
+        f:Hide()
+    end)
+
+    tinsert(UISpecialFrames, "WythicPlusOnboarding")
+    return f
+end
+
+----------------------------------------------------------------
+-- Minimap Button (standard icon on minimap edge)
+----------------------------------------------------------------
 local function IsMinimapSquare()
     return ElvUI ~= nil or Minimap.backdrop ~= nil
 end
@@ -33,7 +145,6 @@ local function SetMinimapButtonPosition(angle)
     local x, y
 
     if IsMinimapSquare() then
-        -- Square minimap: project to square edge
         local ac, as = math.abs(cos), math.abs(sin)
         if ac > as then
             x = half * (cos > 0 and 1 or -1)
@@ -43,7 +154,6 @@ local function SetMinimapButtonPosition(angle)
             x = half * cos / as
         end
     else
-        -- Round minimap
         x = cos * half
         y = sin * half
     end
@@ -160,115 +270,6 @@ local function CreateMinimapIndicator()
     end)
 
     UpdateIndicator()
-end
-
-----------------------------------------------------------------
--- Onboarding Frame (2-step intro)
-----------------------------------------------------------------
-local function CreateOnboardingFrame()
-    local f = CreateFrame("Frame", "WythicPlusOnboarding", UIParent, "BackdropTemplate")
-    f:SetSize(420, 280)
-    f:SetPoint("CENTER")
-    f:SetFrameStrata("DIALOG")
-    f:EnableMouse(true)
-    f:SetMovable(true)
-    f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    f:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
-        tile = true, tileSize = 32, edgeSize = 32,
-        insets = { left = 11, right = 11, top = 12, bottom = 10 },
-    })
-
-    f.pages = {}
-
-    -- Page 1: Branding
-    local p1 = CreateFrame("Frame", nil, f)
-    p1:SetAllPoints()
-
-    local title1 = p1:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    title1:SetPoint("TOP", 0, -30)
-    title1:SetFont(title1:GetFont(), 28, "OUTLINE")
-    title1:SetText("|cff00ccffWythic+|r")
-
-    local sub = p1:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    sub:SetPoint("TOP", title1, "BOTTOM", 0, -10)
-    sub:SetText("WoW M+ 쐐기돌 메타 분석 도구")
-
-    local desc = p1:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    desc:SetPoint("TOP", sub, "BOTTOM", 0, -20)
-    desc:SetWidth(340)
-    desc:SetJustifyH("CENTER")
-    desc:SetText(
-        "상위 런 데이터를 기반으로\n" ..
-        "스펙 티어 · 조합 추천 · 빌드 가이드를\n" ..
-        "제공합니다."
-    )
-
-    local url = p1:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    url:SetPoint("TOP", desc, "BOTTOM", 0, -20)
-    url:SetText("|cff00ccffwythic.com|r")
-
-    local nextBtn = CreateFrame("Button", nil, p1, "UIPanelButtonTemplate")
-    nextBtn:SetSize(120, 28)
-    nextBtn:SetPoint("BOTTOM", f, "BOTTOM", 0, 20)
-    nextBtn:SetText("다음 >")
-
-    f.pages[1] = p1
-
-    -- Page 2: Combat Log
-    local p2 = CreateFrame("Frame", nil, f)
-    p2:SetAllPoints()
-    p2:Hide()
-
-    local title2 = p2:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    title2:SetPoint("TOP", 0, -30)
-    title2:SetFont(title2:GetFont(), 28, "OUTLINE")
-    title2:SetText("|cff00ccffWythic+|r")
-
-    local q = p2:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    q:SetPoint("TOP", title2, "BOTTOM", 0, -24)
-    q:SetText("전투 로그를 활성화하시겠습니까?")
-
-    local note = p2:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    note:SetPoint("TOP", q, "BOTTOM", 0, -10)
-    note:SetText("|cff888888WCL 로깅에 필요합니다.|r")
-
-    local enableBtn = CreateFrame("Button", nil, p2, "UIPanelButtonTemplate")
-    enableBtn:SetSize(100, 28)
-    enableBtn:SetPoint("BOTTOMRIGHT", f, "BOTTOM", -10, 20)
-    enableBtn:SetText("켜기")
-
-    local laterBtn = CreateFrame("Button", nil, p2, "UIPanelButtonTemplate")
-    laterBtn:SetSize(100, 28)
-    laterBtn:SetPoint("BOTTOMLEFT", f, "BOTTOM", 10, 20)
-    laterBtn:SetText("다음에")
-
-    f.pages[2] = p2
-
-    -- Button logic
-    nextBtn:SetScript("OnClick", function()
-        p1:Hide()
-        p2:Show()
-    end)
-
-    enableBtn:SetScript("OnClick", function()
-        LoggingCombat(true)
-        print(PREFIX .. "전투 로그가 활성화되었습니다.")
-        WythicPlusDB.introSeen = true
-        f:Hide()
-        UpdateIndicator()
-    end)
-
-    laterBtn:SetScript("OnClick", function()
-        WythicPlusDB.introSeen = true
-        f:Hide()
-    end)
-
-    tinsert(UISpecialFrames, "WythicPlusOnboarding")
-    return f
 end
 
 ----------------------------------------------------------------
