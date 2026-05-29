@@ -292,14 +292,17 @@ local function CreateMinimapIndicator()
             SetMinimapButtonPosition(angle)
         end)
     end)
-    btn:SetScript("OnDragStop", function()
+    local function StopDragging()
         btn:RegisterForDrag()
         btn:SetScript("OnUpdate", nil)
-    end)
+    end
+    btn:SetScript("OnDragStop", StopDragging)
+    btn:SetScript("OnMouseUp", StopDragging)
 
     -- Tooltip
     btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:SetClampedToScreen(true)
         GameTooltip:AddLine("Wythic+", 0, 0.8, 1)
         if isLogging then
             GameTooltip:AddLine("전투 로그: |cff00ff00활성|r")
