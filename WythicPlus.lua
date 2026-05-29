@@ -319,7 +319,9 @@ local function CreateMinimapIndicator()
 
     -- Left click: show onboarding / Right click: context menu
     btn:SetScript("OnClick", function(_, button)
-        if button == "LeftButton" then
+        if button == "LeftButton" and IsShiftKeyDown() then
+            return -- Shift+클릭은 드래그용, 무시
+        elseif button == "LeftButton" then
             local f = _G["WythicPlusOnboarding"] or CreateOnboardingFrame()
             f.pages[1]:Show()
             f.pages[2]:Hide()
