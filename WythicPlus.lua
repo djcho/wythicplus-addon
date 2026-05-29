@@ -58,7 +58,7 @@ local function CreateOnboardingFrame()
     -- Full background (shifted up 20px)
     local p1bg = p1:CreateTexture(nil, "BACKGROUND")
     p1bg:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\page1-bg")
-    p1bg:SetPoint("TOPLEFT", f, "TOPLEFT", 12, 8)
+    p1bg:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -12)
     p1bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 30)
 
     local desc = p1:CreateFontString(nil, "ARTWORK", "GameFontNormal")
