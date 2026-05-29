@@ -55,22 +55,14 @@ local function CreateOnboardingFrame()
     local p1 = CreateFrame("Frame", nil, f)
     p1:SetAllPoints()
 
-    -- Top background: banner
-    local bannerTex = p1:CreateTexture(nil, "BACKGROUND")
-    bannerTex:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\banner")
-    bannerTex:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -12)
-    bannerTex:SetPoint("TOPRIGHT", f, "TOPRIGHT", -12, -12)
-    bannerTex:SetHeight(130)
-
-    -- Bottom background: blurred tier list
-    local tierTex = p1:CreateTexture(nil, "BACKGROUND")
-    tierTex:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\tierlist-bg")
-    tierTex:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 12, 10)
-    tierTex:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 10)
-    tierTex:SetHeight(130)
+    -- Full background (shifted up 20px)
+    local p1bg = p1:CreateTexture(nil, "BACKGROUND")
+    p1bg:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\page1-bg")
+    p1bg:SetPoint("TOPLEFT", f, "TOPLEFT", 12, 8)
+    p1bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 30)
 
     local desc = p1:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    desc:SetPoint("CENTER", f, "CENTER", 0, -10)
+    desc:SetPoint("CENTER", f, "CENTER", 0, -30)
     desc:SetWidth(340)
     desc:SetJustifyH("CENTER")
     desc:SetText(
@@ -80,9 +72,51 @@ local function CreateOnboardingFrame()
         "제공합니다.|r"
     )
 
-    local url = p1:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    url:SetPoint("TOP", desc, "BOTTOM", 0, -12)
-    url:SetText("|cff00ccffwythic.com|r")
+    local urlBtn = CreateFrame("Button", nil, p1)
+    urlBtn:SetSize(120, 20)
+    urlBtn:SetPoint("TOP", desc, "BOTTOM", 0, -12)
+
+    local urlText = urlBtn:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    urlText:SetPoint("CENTER")
+    urlText:SetText("|cff00ccffwythic.com|r")
+
+    urlBtn:SetScript("OnEnter", function(self)
+        urlText:SetText("|cff66ddff[wythic.com]|r")
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:AddLine("클릭하여 URL 복사")
+        GameTooltip:Show()
+    end)
+    urlBtn:SetScript("OnLeave", function()
+        urlText:SetText("|cff00ccffwythic.com|r")
+        GameTooltip:Hide()
+    end)
+    urlBtn:SetScript("OnClick", function()
+        local popup = CreateFrame("Frame", nil, f, "BackdropTemplate")
+        popup:SetSize(280, 60)
+        popup:SetPoint("CENTER", f, "CENTER", 0, 0)
+        popup:SetFrameStrata("FULLSCREEN_DIALOG")
+        popup:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
+            tile = true, tileSize = 32, edgeSize = 16,
+            insets = { left = 5, right = 5, top = 5, bottom = 5 },
+        })
+
+        local label = popup:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        label:SetPoint("TOP", 0, -10)
+        label:SetText("|cffaaaaaaCtrl+C 로 복사하세요|r")
+
+        local eb = CreateFrame("EditBox", nil, popup, "InputBoxTemplate")
+        eb:SetSize(240, 20)
+        eb:SetPoint("BOTTOM", 0, 10)
+        eb:SetAutoFocus(true)
+        eb:SetText("https://wythic.com")
+        eb:HighlightText()
+        eb:SetScript("OnEscapePressed", function() popup:Hide() end)
+        eb:SetScript("OnEnterPressed", function() popup:Hide() end)
+
+        popup:SetScript("OnHide", function(self) self:SetParent(nil) end)
+    end)
 
     local nextBtn = CreateFrame("Button", nil, p1, "UIPanelButtonTemplate")
     nextBtn:SetSize(120, 28)
@@ -96,24 +130,54 @@ local function CreateOnboardingFrame()
     p2:SetAllPoints()
     p2:Hide()
 
-    -- Background: blurred build screenshot
+    -- Background: build screenshot + dark overlay for blur effect
     local p2bg = p2:CreateTexture(nil, "BACKGROUND")
     p2bg:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\page2-bg")
     p2bg:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -12)
     p2bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 10)
+    p2bg:SetAlpha(0.7)
 
-    local title2 = p2:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    title2:SetPoint("TOP", 0, -30)
-    title2:SetFont(title2:GetFont(), 28, "OUTLINE")
-    title2:SetText("|cff00ccffWythic+|r")
+    local p2overlay = p2:CreateTexture(nil, "BACKGROUND", nil, 1)
+    p2overlay:SetColorTexture(0, 0, 0, 0.3)
+    p2overlay:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -12)
+    p2overlay:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 10)
 
-    local q = p2:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    q:SetPoint("TOP", title2, "BOTTOM", 0, -24)
-    q:SetText("전투 로그를 활성화하시겠습니까?")
+    -- Badge showcase (carry / perfect / troll)
+    local BADGE_W, BADGE_H = 90, 46
+    local BADGE_GAP = 8
 
-    local note = p2:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    note:SetPoint("TOP", q, "BOTTOM", 0, -10)
-    note:SetText("|cff888888WCL 로깅에 필요합니다.|r")
+    local badgeCarry = p2:CreateTexture(nil, "ARTWORK")
+    badgeCarry:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\badge-carry")
+    badgeCarry:SetSize(BADGE_W, BADGE_H)
+    badgeCarry:SetPoint("RIGHT", f, "CENTER", -BADGE_GAP/2 - BADGE_W/2, 60)
+
+    local badgePerfect = p2:CreateTexture(nil, "ARTWORK")
+    badgePerfect:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\badge-perfect")
+    badgePerfect:SetSize(BADGE_W + 16, BADGE_H)
+    badgePerfect:SetPoint("CENTER", f, "CENTER", 0, 68)
+
+    local badgeTroll = p2:CreateTexture(nil, "ARTWORK")
+    badgeTroll:SetTexture("Interface\\AddOns\\WythicPlus\\Textures\\badge-troll")
+    badgeTroll:SetSize(BADGE_W, BADGE_H)
+    badgeTroll:SetPoint("LEFT", f, "CENTER", BADGE_GAP/2 + BADGE_W/2, 60)
+
+    local promo = p2:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    promo:SetPoint("CENTER", f, "CENTER", 0, 28)
+    promo:SetWidth(340)
+    promo:SetJustifyH("CENTER")
+    promo:SetFont(promo:GetFont(), 11, "OUTLINE")
+    promo:SetText("|cffdddddd내 플레이 스타일은?|r " ..
+        "|cff00ccffwythic.com|r|cffdddddd에서 확인하세요|r")
+
+    local q = p2:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    q:SetPoint("CENTER", f, "CENTER", 0, -6)
+    q:SetFont(q:GetFont(), 18, "OUTLINE")
+    q:SetText("|cffffffff전투 로그를 활성화하시겠습니까?|r")
+
+    local note = p2:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    note:SetPoint("TOP", q, "BOTTOM", 0, -8)
+    note:SetFont(note:GetFont(), 11, "OUTLINE")
+    note:SetText("|cff999999WCL 업로드 시 뱃지가 자동으로 부여됩니다.|r")
 
     local enableBtn = CreateFrame("Button", nil, p2, "UIPanelButtonTemplate")
     enableBtn:SetSize(100, 28)
