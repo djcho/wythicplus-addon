@@ -356,11 +356,9 @@ end
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:SetScript("OnEvent", function(_, _, isInitialLogin)
-    -- Sync state once on load
-    isLogging = LoggingCombat() and true or false
-
-    -- Always create minimap indicator
+    -- Sync from WoW API only on first load, then trust local state
     if not minimapBtn then
+        isLogging = LoggingCombat() and true or false
         CreateMinimapIndicator()
     end
 
